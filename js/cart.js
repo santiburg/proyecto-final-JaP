@@ -1,11 +1,43 @@
-let cart = JSON.parse(localStorage.getItem('cart')) || []; //Obtengo el carrito del localStorage
+// Función para obtener el carrito desde la base de datos
+async function fetchCartFromDatabase() {
+    try {
+        // Realiza la solicitud a la API de tu backend
+        const response = await fetch('/api/cart', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
 
-document.addEventListener('DOMContentLoaded', () => {
-    if(!localStorage.getItem('isAuthenticated')){
-        alert("Debes iniciar sesión para acceder al carrito.")
-        window.location.href = "login.html";
+        if (!response.ok) {
+            throw new Error('Error al obtener el carrito desde la base de datos');
+        }
+
+        // Convierte la respuesta en JSON
+        const cartData = await response.json();
+
+        // Devuelve el carrito
+        return cartData;
+    } catch (error) {
+        console.error('Error:', error);
+        return []; // Devuelve un carrito vacío en caso de error
     }
-})
+}
+
+// Inicializa el carrito
+async function initializeCart() {
+    // Obtiene el carrito desde localStorage
+    let cart = JSON.parse(localStorage.getItem('cart'));
+
+    // Usa el carrito en tu aplicación
+    return cart;
+}
+
+// Ejecuta la inicialización del carrito
+initializeCart();
+
+
+let cart = JSON.parse(localStorage.getItem('cart')) || []; //Obtengo el carrito desde la base de datos
 
 function renderCart() { //Muestro los productos del localStorage en el carrito
     const cartContainer = document.getElementById('cart-items');
@@ -22,7 +54,7 @@ function renderCart() { //Muestro los productos del localStorage en el carrito
         <div class="row align-items-center g-3 m-3">
             <!-- IMA -->
             <div class="col-12 col-md-2 mt-0">
-                <img src="${item.images[0]}" class="product-image img-fluid rounded" alt="${item.name}">
+                <img src="${item.image}" class="product-image img-fluid rounded" alt="${item.name}">
             </div>
             
             <!-- NOMBRE PRECIO CANTIDAD -->
@@ -33,11 +65,12 @@ function renderCart() { //Muestro los productos del localStorage en el carrito
                         <!-- Product Info - Full width on mobile, 6 columns on md+ -->
                         <div class="col-12 col-md-6 mt-0">
                             <h5 class="card-title mb-3 mt-md-0 mt-2">${item.name}</h5>
-                            <p class="card-text text-muted mb-3">Precio: ${item.currency} ${item.cost.toFixed(2)}</p>
+                            <p class="card-text text-muted mb-3">Precio: ${item.currency} ${item.cost}</p>
                             <div class="row g-3">
                                 <div  class="input-group" style="max-width: 200px;">
                                     <span class="input-group-text">Cantidad</span>
                                     <input type="number" 
+                                    onkeydown="return false;"
                                     class="form-control quantity-input" 
                                     value="${cartItem.quantity}" 
                                     min="1" 
@@ -73,7 +106,6 @@ function updateTotal() {
         const quantity = parseInt(input.value) || 0;
         cart[existingItemIndex].quantity = quantity;
         localStorage.setItem('cart', JSON.stringify(cart));
-
         const subtotal = cartItem.item.currency === 'USD' ? cartItem.item.cost * quantity : cartItem.item.cost / 42 * quantity; // usa costo de item * cantidad para el subtotal individual
         total += subtotal;
         const subtotalElement = input.closest('.card-body').querySelector('.subtotal');
@@ -87,7 +119,18 @@ function updateTotal() {
 function deleteItem(itemId) {
     const existingItemIndex = cart.findIndex(cartItem => cartItem.item.id === itemId);
     cart.splice(existingItemIndex, 1);
+
+    fetch('http://localhost:3000/delete_cart', {
+        method: 'POST',
+        headers: {
+            'Authorization': `${TOKEN}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({email: localStorage.getItem('email'), product_id: itemId}) // Send the individual product update
+    })
+
     localStorage.setItem('cart', JSON.stringify(cart));
+
     document.getElementById(`item-cart`).remove();
     renderCart();
     document.getElementById("cartBadge").textContent = JSON.parse(localStorage.getItem('cart')).length || 0
@@ -104,7 +147,7 @@ function actualizarCostos() {
     if (document.getElementById("cart-total").innerText == '0.00') {
         document.getElementById("btnCompra").setAttribute("disabled", '');
     }
-    else{
+    else {
         document.getElementById("btnCompra").removeAttribute("disabled");
     }
     if (shippingMethod.value == '') {
@@ -129,7 +172,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('carritoForm');
     const shippingMethod = document.getElementById('shippingMethod');
     const formaPago = document.getElementById('formaPago');
-    
+
     // Actualizar costos cuando cambia el tipo de envío
     shippingMethod.addEventListener('change', actualizarCostos);
 

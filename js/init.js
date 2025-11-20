@@ -1,15 +1,27 @@
-const CATEGORIES_URL = "https://japceibal.github.io/emercado-api/cats/cat.json";
-const PUBLISH_PRODUCT_URL = "https://japceibal.github.io/emercado-api/sell/publish.json";
-const PRODUCTS_URL = "https://japceibal.github.io/emercado-api/cats_products/";
-const PRODUCT_INFO_URL = "https://japceibal.github.io/emercado-api/products/";
-const PRODUCT_INFO_COMMENTS_URL = "https://japceibal.github.io/emercado-api/products_comments/";
-const CART_INFO_URL = "https://japceibal.github.io/emercado-api/user_cart/";
-const CART_BUY_URL = "https://japceibal.github.io/emercado-api/cart/buy.json";
+const CATEGORIES_URL = "http://localhost:3000/cats/cat.json";
+const PUBLISH_PRODUCT_URL = "http://localhost:3000/sell/publish.json";
+const PRODUCTS_URL = "http://localhost:3000/cats_products/";
+const PRODUCT_INFO_URL = "http://localhost:3000/products/";
+const PRODUCT_INFO_COMMENTS_URL = "http://localhost:3000/products_comments/";
+const CART_INFO_URL = "http://localhost:3000/user_cart/";
+const CART_BUY_URL = "http://localhost:3000/cart/buy.json";
 const EXT_TYPE = ".json";
+const TOKEN = localStorage.getItem('token');
 
-document.addEventListener("DOMContentLoaded", function (e) {
-  localStorage.getItem('cart') ? document.getElementById("cartBadge").textContent = JSON.parse(localStorage.getItem('cart')).length || 0 : document.getElementById("cartBadge").textContent = 0
-  if (localStorage.getItem("isAuthenticated") == "true") {
+fetch('http://localhost:3000/protected', {
+  method: 'GET',  // Ensure the method is GET
+  headers: {
+    'Authorization': `${TOKEN}`
+  }
+})
+.then(response => {
+  if (response.status === 403 && !(window.location.pathname.endsWith('/login.html') || window.location.pathname.endsWith('/register.html'))) {
+    window.location.href = "login.html";
+  }
+  else{
+    if(response.ok && window.location.pathname.endsWith('/login.html')){
+      window.location.href = "my-profile.html";
+    }
     var menuOffcanvas = document.getElementById("loginInicio");
     menuOffcanvas.setAttribute("data-bs-toggle", "offcanvas");
     menuOffcanvas.setAttribute("data-bs-target", "#offcanvasRight");
@@ -23,6 +35,72 @@ document.addEventListener("DOMContentLoaded", function (e) {
       window.location.href = "login.html";
     })
   }
+})
+
+
+// Referencia a setItem original
+const originalSetItem = localStorage.setItem;
+
+// Sobreescribo el setItem
+localStorage.setItem = function (key, value) {
+    originalSetItem.apply(this, arguments);
+
+    // Create and dispatch the custom event
+    const event = new Event('localStorageChange');
+    event.key = key;
+    event.newValue = value;
+    window.dispatchEvent(event);
+};
+
+// Timer para evitar recursión al actualizar el carrito.
+let antiRecursionTimer;
+
+// Escucha cambios en localstorage, y actualiza el carrito si es el item que cambia.
+window.addEventListener('localStorageChange', (event) => {
+    if (event.key === 'cart') {
+        // Limpia el timer
+        clearTimeout(antiRecursionTimer);
+
+        // Crea el timer
+        antiRecursionTimer = setTimeout(debouncedUpdateCart, 300); // timer para evitar iteraciones innecesarias.
+    }
+});
+
+//Código con el fetch para actualizar el carrito
+const debouncedUpdateCart = () => {
+    try {
+        let cart = JSON.parse(localStorage.getItem('cart'));
+
+            // Iterate through each product and send individual requests
+            cart.forEach(product => {
+                const payload = {
+                    email: localStorage.getItem('email'),
+                    product_id: product.item.id,
+                    count: product.quantity
+                };
+
+                fetch('http://localhost:3000/cart', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload) // Send the individual product update
+                })
+                .then(response => response.json())
+                .then(data => console.log('Response:', data))
+                .catch(error => console.error('Error:', error));
+            });
+        
+    } catch (error) {
+        console.error('Error:', error);
+    }
+};
+
+
+
+document.addEventListener("DOMContentLoaded", function (e) {
+  localStorage.getItem('cart') ? document.getElementById("cartBadge").textContent = JSON.parse(localStorage.getItem('cart')).length || 0 : document.getElementById("cartBadge").textContent = 0
 
   const darkModeSwitch = document.getElementById('darkModeSwitch');
   const body = document.body;
@@ -63,10 +141,16 @@ let hideSpinner = function () {
   document.getElementById("spinner-wrapper").style.display = "none";
 }
 
+
 let getJSONData = function (url) {
   let result = {};
   showSpinner();
-  return fetch(url)
+  return fetch(url,{
+    headers:{
+      'Authorization': `${TOKEN}`
+    }
+  })
+  
     .then(response => {
       if (response.ok) {
         return response.json();

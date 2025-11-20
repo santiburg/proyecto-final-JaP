@@ -23,16 +23,12 @@ const fetchReviews = async () => {
     }
 };
 
-//Llamo a la función fetchReviews y asigno los datos del producto a la variable reviewsData
 fetchReviews().then((data) => {
-    reviewsData = data;
-    displayReviews(reviewsData);
+    displayReviews(data);
 });
 
-// Llamo a la función fetchItem y asigno los datos del producto a la variable itemData
 fetchItem().then((data) => {
-    itemData = data;
-    showItem(itemData); // Llamo a la función para mostrar los datos del producto
+    showItem(data);
 });
 
 // Declaro la función showItem que muestra los datos del producto en la página, utilizando el JSON obtenido de la API
@@ -108,12 +104,6 @@ const showItem = (item) => {
     const comprarButton = document.getElementById('comprar');
 
     comprarButton.addEventListener('click', () => {
-        if (!localStorage.getItem('isAuthenticated')) {
-            alert('Debe iniciar sesión para comprar');
-            window.location.href = 'login.html';
-            return;
-        }
-
         const quantityToAdd = Number(document.getElementById('cantidad').value);
 
         if (existingItemIndex !== -1) {
@@ -121,7 +111,19 @@ const showItem = (item) => {
             cart[existingItemIndex].quantity = quantityToAdd;
         } else {
             // Si no existe, lo agrega, y la cantidad.
-            cart.push({ item: item, quantity: quantityToAdd });
+
+
+            let filteredItem = {
+                id: item.id,
+                name: item.name,
+                currency: item.currency,
+                description: item.description,
+                cost: item.cost,
+                image: item.images[0]
+            }
+            cart.push({ item: filteredItem, quantity: quantityToAdd });
+
+
             document.getElementById("cartBadge").textContent = parseInt(document.getElementById("cartBadge").textContent) + 1;
         }
         alert(`Se encuentran ${quantityToAdd} ${item.name} agregados al carrito`);
@@ -131,6 +133,7 @@ const showItem = (item) => {
     });
 
 };
+
 function setItemID(id) {
     localStorage.setItem("itemID", id);
     window.location = "product-info.html";

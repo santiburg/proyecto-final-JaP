@@ -307,6 +307,7 @@ a.custom-card:hover {
   font-size: 0;
   color: #ffc107;
 }
+
 .star-rating-input {
   display: inline-flex;
   flex-direction: row-reverse;
@@ -471,7 +472,6 @@ body.dark-mode {
   border-color: #002752;
 }
 
-.dark-mode .bi-star-fill{
+.dark-mode .star-rating {
   color: #ffcc00;
 }
-

@@ -3,10 +3,6 @@ const profilePicture = document.getElementById("profilePicture"); // elemento do
 const savedProfilePicture = localStorage.getItem("profilePicture"); // obtener la imagen guardada en el localStorage
 
 document.addEventListener("DOMContentLoaded", function () {
-    if (localStorage.getItem("isAuthenticated") !== "true") {
-        window.location.href = "login.html"; // Redirigir al login si no está autenticado
-        return;
-      }
     const storeEmail = localStorage.getItem("email");
     if (storeEmail) {
         document.getElementById("E-mail").value = storeEmail;
